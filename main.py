@@ -1,12 +1,11 @@
 import tensorflow as tf
-import PIL
-import imageio
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import time
 import cv2 as cv2
 from models import CVAE
+plt.rcParams['axes.facecolor'] = 'black'
 
 localpath = "C:/Users/Zak/Documents/Code/AIChan/imgGan/CipherGan"
 shapeSizex = 512
@@ -14,10 +13,10 @@ shapeSizey = 512
 datasetSize= 30
 train_size = int(datasetSize/2)
 test_size = int(datasetSize/2)
-batch_size = 6
-num_examples_to_generate = 6
-epochs = 150
-latent_dim = 2
+batch_size = 4
+num_examples_to_generate = 4
+epochs = 250
+latent_dim = 3
 list_ = []
 train_images=[]
 test_images=[]
@@ -27,7 +26,8 @@ def read_img(img_list, img):
     img_list.append(n)
     return img_list
 
-path = glob.glob(localpath+"/TestDataset/*.jpg") #or jpg
+path = glob.glob(localpath+"/TestDataset/*.png") #or jpg
+path = path[:datasetSize]
 cv_image = [read_img(list_, img) for img in path]
 
 
@@ -88,29 +88,28 @@ def train_step(model, x, optimizer):
   optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
 
-# this will be easier to see the improvement.
-random_vector_for_generation = tf.random.normal(
-    shape=[num_examples_to_generate, latent_dim]) 
-model = CVAE(latent_dim)
-
 def generate_and_save_images(model, epoch, test_sample):
   mean, logvar = model.encode(test_sample)
   z = model.reparameterize(mean, logvar)
   predictions = model.sample(z)
 
   fig = plt.figure(figsize=(4, 4))
+  fig.set_facecolor('black')
   for i in range(predictions.shape[0]):
-    plt.subplot(4, 4, i + 1)
+    plt.subplot(4, 4, i + 1,facecolor=(0, 0, 0))
     plt.imshow(predictions[i, :, :, 0], cmap='gray')
+    # plt.imshow(predictions[i, :, :, 0])
     plt.axis('off')
-
-
   plt.axis('off')
   # plt.imshow(predictions[0,:,:,0])#Single img show
-
-  plt.savefig(localpath+'/genimg/image_at_epoch_{:04d}.png'.format(epoch))
+  plt.savefig(localpath+'/genimg/image_at_epoch_{:04d}.jpg'.format(epoch))
   #plt.show()
 
+# this will be easier to see the improvement.
+random_vector_for_generation = tf.random.normal(
+    shape=[num_examples_to_generate, latent_dim]) 
+
+model = CVAE(latent_dim)
 #get some samples from test to gen output
 assert batch_size >= num_examples_to_generate
 test_sample = 0
@@ -118,9 +117,7 @@ for test_batch in test_dataset.take(1): #Changed for full img
   # test_sample = test_batch[0:num_examples_to_generate, :, :, :]
   test_sample = test_batch[0:num_examples_to_generate, :, :, :]
 
-
 generate_and_save_images(model, 0, test_sample)
-
 for epoch in range(1, epochs + 1):
   start_time = time.time()
   for train_x in train_dataset:
